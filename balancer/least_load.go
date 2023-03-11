@@ -23,6 +23,7 @@ func (h *host) Key() float64 { return float64(h.load) }
 // LeastLoad will choose a host based on the least load host
 type LeastLoad struct {
 	sync.RWMutex
+	// 采用斐波那契堆来用O(1)的速度寻找节点
 	heap *fibHeap.FibHeap
 }
 

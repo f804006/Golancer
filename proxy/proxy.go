@@ -64,7 +64,8 @@ func NewHTTPProxy(targetHosts []string, algorithm string) (
 		}
 		// GetHost return a string like IP:port
 		host := GetHost(url)
-		alive[host] = true // 主机默认存活
+		// 主机默认存活
+		alive[host] = true
 		hostMap[host] = proxy
 		hosts = append(hosts, host)
 	}

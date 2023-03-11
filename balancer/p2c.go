@@ -17,12 +17,14 @@ func init() {
 	factories[P2CBalancer] = NewP2C
 }
 
+// 记录主机名以及负载量
 type host struct {
 	name string
 	load uint64
 }
 
 // P2C refer to the power of 2 random choice
+// Add 和 Remove 的逻辑与普通的算法有点不同，要考虑负载量
 type P2C struct {
 	sync.RWMutex
 	hosts   []*host
@@ -85,6 +87,8 @@ func (p *P2C) Balance(key string) (string, error) {
 	}
 
 	n1, n2 := p.hash(key)
+
+	// 返回一个负载量小的主机
 	host := n2
 	if p.loadMap[n1].load <= p.loadMap[n2].load {
 		host = n1
@@ -94,12 +98,15 @@ func (p *P2C) Balance(key string) (string, error) {
 
 func (p *P2C) hash(key string) (string, string) {
 	var n1, n2 string
+	// 非空IP
 	if len(key) > 0 {
+		// 给IP加盐
 		saltKey := key + Salt
 		n1 = p.hosts[crc32.ChecksumIEEE([]byte(key))%uint32(len(p.hosts))].name
 		n2 = p.hosts[crc32.ChecksumIEEE([]byte(saltKey))%uint32(len(p.hosts))].name
 		return n1, n2
 	}
+	// 空IP则随机选取
 	n1 = p.hosts[p.rnd.Intn(len(p.hosts))].name
 	n2 = p.hosts[p.rnd.Intn(len(p.hosts))].name
 	return n1, n2
