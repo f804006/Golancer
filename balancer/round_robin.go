@@ -4,7 +4,8 @@
 
 package balancer
 
-//RoundRobin will select the server in turn from the server to proxy
+// RoundRobin will select the server in turn from the server to proxy
+// i: 轮询方式的请求序号，可以通过i % len(hosts) 的方式得到代理的主机
 type RoundRobin struct {
 	BaseBalancer
 	i uint64

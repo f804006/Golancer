@@ -4,12 +4,14 @@ import (
 	"sync"
 )
 
+// BaseBalancer hosts 表示的需要代理的主机
 type BaseBalancer struct {
 	sync.RWMutex
 	hosts []string
 }
 
 // Add new host to the balancer
+// 实现了 balencer 接口，作为 base 给各个负载均衡器提供 balencer 接口
 func (b *BaseBalancer) Add(host string) {
 	b.Lock()
 	defer b.Unlock()

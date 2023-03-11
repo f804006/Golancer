@@ -26,22 +26,29 @@ var (
 )
 
 // HTTPProxy refers to a reverse proxy in the balancer
+// 需要实现 ServeHTTP 来实现反向代理
 type HTTPProxy struct {
+	// 主机与反向代理的映射
 	hostMap map[string]*httputil.ReverseProxy
-	lb      balancer.Balancer
+	// 负载均衡器
+	lb balancer.Balancer
 
 	sync.RWMutex // protect alive
-	alive        map[string]bool
+	// 判断健康状态
+	alive map[string]bool
 }
 
 // NewHTTPProxy create  new reverse proxy with url and balancer algorithm
+// targetHosts: 代理主机集合, algorithm: 使用的负载均衡算法
 func NewHTTPProxy(targetHosts []string, algorithm string) (
 	*HTTPProxy, error) {
 
 	hosts := make([]string, 0)
 	hostMap := make(map[string]*httputil.ReverseProxy)
 	alive := make(map[string]bool)
+	// 为每一个代理主机生成一个映射关系
 	for _, targetHost := range targetHosts {
+		// 解析 url
 		url, err := url.Parse(targetHost)
 		if err != nil {
 			return nil, err
@@ -51,17 +58,18 @@ func NewHTTPProxy(targetHosts []string, algorithm string) (
 		originDirector := proxy.Director
 		proxy.Director = func(req *http.Request) {
 			originDirector(req)
+			// 为请求设置头部字段
 			req.Header.Set(XProxy, ReverseProxy)
 			req.Header.Set(XRealIP, GetIP(req))
 		}
-
+		// GetHost return a string like IP:port
 		host := GetHost(url)
-		alive[host] = true // initial mark alive
+		alive[host] = true // 主机默认存活
 		hostMap[host] = proxy
 		hosts = append(hosts, host)
 	}
 
-	lb, err := balancer.Build(algorithm, hosts)
+	lb, err := balancer.Build(algorithm, hosts) // 根据算法构建负载均衡器
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +82,8 @@ func NewHTTPProxy(targetHosts []string, algorithm string) (
 }
 
 // ServeHTTP implements a proxy to the http server
+// HTTPProxy 会使用负载均衡器依据客户端访问的IP将其定向到其中的一台主机中
+// 若出现错误则返回 502 BadGateway
 func (h *HTTPProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -83,6 +93,7 @@ func (h *HTTPProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	// 用负载均衡器依据客户端访问的IP将其定向到其中的一台主机中
 	host, err := h.lb.Balance(GetIP(r))
 	if err != nil {
 		w.WriteHeader(http.StatusBadGateway)

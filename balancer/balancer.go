@@ -14,10 +14,14 @@ var (
 )
 
 // Balancer interface is the load balancer for the reverse proxy
+// 实现 工厂模式
 type Balancer interface {
+	// Add 为负载均衡器新增一个主机
 	Add(string)
 	Remove(string)
 	Balance(string) (string, error)
+
+	// Inc Done 表示对代理主机的连接数+1或者-1操作
 	Inc(string)
 	Done(string)
 }
